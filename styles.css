@@ -1,0 +1,31 @@
+body {
+	font-family: arial;
+}
+
+#game {
+	margin: 0 auto;
+	display: block;
+	background-color: black;
+}
+
+.lives {
+	color: red;
+	margin: 0 auto;
+	width: 500px;
+}
+
+.lives span {
+	float: right;
+	font-weight: bold;
+	padding: 0.5em;
+}
+
+.hide {
+	display: none;
+}
+
+.status {
+	padding-top: 1em;
+	text-align: center;
+	clear: both;
+}
