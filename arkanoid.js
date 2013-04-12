@@ -196,21 +196,23 @@ function Game(options) {
 	function addKeyHandlers() {
 		// start bat movement
 		document.onkeydown = function (event) {
-			if(event.keyCode == 37)
+			var key = event.charCode ? event.charCode : event.keyCode;
+			if(key == 37)
 				bat.isMovingLeft = true;
-			if(event.keyCode == 39)
+			if(key == 39)
 				bat.isMovingRight = true;
 		};
 		
 		// stop bat movement
-		document.onkeyup = function (event) {
+		document.onkeyup = function () {
 			bat.isMovingLeft = false;
 			bat.isMovingRight = false;
 		};
 
 		// reset the game
 		document.onkeypress = function (event) {
-			if(event.keyCode == 32 && !game.isRunning) {
+			var key = event.charCode ? event.charCode : event.keyCode;
+			if(key == 32 && !game.isRunning) {
 				game.reset();
 			}
 		};
