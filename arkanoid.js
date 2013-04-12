@@ -35,7 +35,7 @@ function Game(options) {
 		bat.init();
 		game.isRunning = true;
 		status.innerHTML = "";
-		window.webkitRequestAnimationFrame(tick); // todo: browser detect
+		reqAnimationFrame(tick);
 	};
 
 	/*
@@ -185,7 +185,7 @@ function Game(options) {
 		if (game.isRunning) {
 			bat.draw();
 			ball.draw();
-			window.webkitRequestAnimationFrame(tick); // todo: browser detect
+			reqAnimationFrame(tick);
 		}
 	}
 
@@ -214,6 +214,22 @@ function Game(options) {
 				game.reset();
 			}
 		};
+	}
+
+	/*
+	 *	Helper function that finds the right animation frame request
+	 */
+	function reqAnimationFrame(func) {
+		if (typeof window.msRequestAnimationFrame === 'function') 
+			return window.msRequestAnimationFrame(func);
+
+		if (typeof window.mozRequestAnimationFrame === 'function') 
+			return window.mozRequestAnimationFrame(func);
+
+		if (typeof window.webkitRequestAnimationFrame === 'function') 
+			return window.webkitRequestAnimationFrame(func);
+
+		return false;
 	}
 
 }
