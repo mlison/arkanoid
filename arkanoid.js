@@ -3,15 +3,11 @@ function Game(options) {
 	
 	var game = this;
 
-	// game canvas
-	var canvas = options.canvas;
-	// canvas context
+	var canvas = (options.canvas) ? options.canvas : document.querySelector('#game');
 	var ctx = canvas.getContext("2d");
-	// status element
-	var status = document.querySelectorAll(".status")[0];
-	// speed of the game (ball)
-	game.speed = options.speed;
-	// controls the animation
+	var status = (options.status) ? options.status : document.querySelectorAll(".status")[0];
+	var speed = (options.speed) ? options.speed : 5;
+
 	game.isRunning = false;
 	game.isWon = false;
 
@@ -20,12 +16,33 @@ function Game(options) {
 	 */
 	this.init = function () {
 		images.init();
-		ball.init();
-		bat.init();
-		bricks.init();
-		lives.init();
+
+		if (window.localStorage) {
+			var gs = JSON.parse(window.localStorage.getItem('gamestate'));
+			// if gamestate is present from previous session use stored values to initiate the game
+			if (gs !== null) {
+				bricks.init(gs.bricks.currentMap.clone(), gs.bricks.remaining);
+				ball.init(gs.ball.x, gs.ball.y, gs.ball.dx, gs.ball.dy);
+				bat.init(gs.bat.pos);
+				lives.init(gs.lives);
+			} 
+			// otherwise just start the game with default values
+			else {
+				lives.init();
+				ball.init();
+				bat.init();
+				bricks.init();
+			}
+		} else {
+			ball.init();
+			bat.init();
+			bricks.init();
+			lives.init();
+		}
+
 		addKeyHandlers();
 		game.isRunning = true;
+
 		tick();
 	};
 
@@ -48,8 +65,8 @@ function Game(options) {
 	 *	.die()			removes a life
 	 */
 	var lives = {
-		init: function () {
-			this.count = options.lives;
+		init: function (count) {
+			this.count = (count) ? count : options.lives;
 			this.draw();
 		},
 		container: document.querySelectorAll(".lives")[0],
@@ -75,11 +92,11 @@ function Game(options) {
 	 *  .padding	offset from the edge used to soften edges of the playground
 	 */
 	var ball = {
-		init: function () {
-			this.x = canvas.width / 2,
-			this.y = canvas.height / 2,
-			this.dx = 0.05,
-			this.dy = 1,
+		init: function (x, y, dx, dy) {
+			this.x = (x) ? x : canvas.width / 2,
+			this.y = (y) ? y : canvas.height / 2,
+			this.dx = (dx) ? dx : 0.05,
+			this.dy = (dy) ? dy : 1,
 			this.size = 10;
 		},
 		draw: function () {
@@ -98,12 +115,12 @@ function Game(options) {
 	 *	.draw()		draws a bat on canvas at its current position
 	 */
 	var bat = {
-		init: function () {
+		init: function (pos) {
 			this.width = 80,
 			this.height = 12,
 			this.isMovingLeft = false,
 			this.isMovingRight = false,
-			this.pos = (canvas.width / 2) - (this.width / 2);
+			this.pos = (pos) ? pos : (canvas.width / 2) - (this.width / 2);
 		},
 		draw: function () {
 			if (this.isMovingLeft && this.pos > 0) 
@@ -124,9 +141,9 @@ function Game(options) {
 	 *	.draw()		loops through all the bricks and draws them on canvas
 	 */
 	var bricks = {
-		init: function () {
-			this.currentMap = this.levelMap.clone(),
-			this.remaining = 0;
+		init: function (map, remaining) {
+			this.currentMap = (map) ? map : this.levelMap.clone(),
+			this.remaining = (remaining) ? remaining : 0;
 			this.draw();
 		},
 		height: function () { return 20; },
@@ -188,8 +205,8 @@ function Game(options) {
 			ball.dy = -ball.dy;
 		}
 		
-		ball.y += ball.dy * game.speed;
-		ball.x += ball.dx * game.speed;
+		ball.y += ball.dy * speed;
+		ball.x += ball.dx * speed;
     }
 
     /*
@@ -206,11 +223,20 @@ function Game(options) {
 			status.innerHTML = "You win. Press spacebar for new game.";
 		}
 
-
 		if (game.isRunning) {
 			bat.draw();
 			ball.draw();
 			reqAnimationFrame(tick);
+		}
+
+		if (window.localStorage) {
+			var gamestate = {
+				lives: lives.count,
+				ball: ball,
+				bat: bat,
+				bricks: bricks
+			};
+			window.localStorage.setItem('gamestate', JSON.stringify(gamestate));
 		}
 	}
 
