@@ -1,3 +1,11 @@
+Array.prototype.clone = function() {
+    var arr = this.slice(0);
+    for( var i = 0; i < this.length; i++ )
+        if( this[i].clone )
+            arr[i] = this[i].clone();
+    return arr;
+};
+
 function Game(options) {
 	"use strict";
 	
@@ -10,18 +18,20 @@ function Game(options) {
 	// status element
 	var status = document.querySelectorAll(".status")[0];
 	// speed of the game (ball)
-	this.speed = options.speed;
+	game.speed = options.speed;
 	// controls the animation
-	this.isRunning = false;
+	game.isRunning = false;
+	game.isWon = false;
 
 	/*
 	 *	Public .init() initiates the game
 	 */
 	this.init = function () {
+		images.init();
 		ball.init();
 		bat.init();
-		lives.draw();
-		bricks.draw();
+		bricks.init();
+		lives.init();
 		addKeyHandlers();
 		game.isRunning = true;
 		tick();
@@ -46,12 +56,14 @@ function Game(options) {
 	 *	.die()			removes a life
 	 */
 	var lives = {
+		init: function () {
+			this.count = options.lives;
+			this.draw();
+		},
 		container: document.querySelectorAll(".lives")[0],
-		count: options.lives,
 		draw: function() {
 			for (var i = 0; i < this.count; i++) {
 				var life = document.createElement('span');
-					life.innerHTML = "<3";
 				this.container.appendChild(life);
 			}
 		},
@@ -65,28 +77,23 @@ function Game(options) {
 	 *	Private ball object
 	 *	.init()		initializes basic properties of the ball (position, direction and size)
 	 *	.draw()		draws ball on canvas at its current x:y position
+	 *	.size		radius of "ball" icon, although its technically a square
+	 *	.icon		reference to the bird image
 	 *  .left(), .right(), .top(), .bottom() are ball boundries	
 	 *  .padding	offset from the edge used to soften edges of the playground
 	 */
 	var ball = {
 		init: function () {
-			this.x = canvas.width / 4,
-			this.y = canvas.height / 4 * 3,
-			this.dx = 1,
+			this.x = canvas.width / 2,
+			this.y = canvas.height / 2,
+			this.dx = 0.05,
 			this.dy = 1,
-			this.size = 8;
+			this.size = 10;
 		},
-
 		draw: function () {
-			ctx.fillStyle = "#FF0000";
-			ctx.beginPath();
-			ctx.arc(this.x, this.y, this.size, 0, Math.PI*2, true); 
-			ctx.closePath();
-			ctx.fill();
+			ctx.drawImage(images.bird, this.x-this.size, this.y-this.size);
 		},
-		
 		padding: 5,
-		
 		left: function () { return this.x - this.size / 2 - this.padding; },
 		right: function () { return this.x + this.size / 2 + this.padding; },
 		bottom: function () { return this.y + this.size + 12 / 2 + this.padding; },
@@ -112,37 +119,40 @@ function Game(options) {
 			if (this.isMovingRight && this.pos < canvas.width - this.width) 
 				this.pos += 8;
 
-			ctx.fillStyle = "#993300";
-			ctx.beginPath();
-			ctx.rect(this.pos, canvas.height - 24, this.width, this.height); 
-			ctx.closePath();
-			ctx.fill();
+			ctx.drawImage(images.stone, this.pos, canvas.height - 24);
 		}
 	};
 
 	/*
 	 *	Private brick object
-	 *	.height		height of the bat
+	 *	.height		
+	 *  .width
 	 *	.perRow		how many bricks in one row
-	 *	.array		map of how bricks are distributed
+	 *	.levelMap	map of how bricks are distributed
 	 *	.draw()		loops through all the bricks and draws them on canvas
 	 */
 	var bricks = {
-		perRow: 6,
-		height: 20,
-		array: [1, 1, 1, 1, 1, 1, 
-				1, 1, 1, 0, 1, 1,
-				1, 1, 1, 1, 1, 1],
+		init: function () {
+			this.currentMap = this.levelMap.clone(),
+			this.remaining = 0;
+			this.draw();
+		},
+		height: function () { return 20; },
+		width: function () { return canvas.width / this.currentMap[0].length; },
+		remaining: 0,
+		levelMap: [
+			[1,1,1,1,1,1,1,1,1,1],
+			[1,1,1,1,1,1,1,1,1,1],
+			[0,0,0,3,1,1,3,0,0,0],
+			[0,0,0,0,3,3,0,0,0,0]
+		],
 		draw: function () {
-			for (var i in bricks.array) {
-				var row = bricks.array.slice(i*bricks.perRow, (i+1)*bricks.perRow);
-				for (var j in row) {
-					if (row[j] === 1) {
-						ctx.fillStyle = "#000090";
-						ctx.beginPath();
-						ctx.rect((canvas.width/bricks.perRow)*j, i*bricks.height, (canvas.width/bricks.perRow)-1, bricks.height-1); 
-						ctx.closePath();
-						ctx.fill();
+			this.remaining = 0;
+			for (var row in this.currentMap) {
+				for (var brick in this.currentMap[row]) {
+					if (this.currentMap[row][brick] > 0) {
+						ctx.drawImage(images[this.currentMap[row][brick]], this.width() * brick, row * bricks.height());
+						this.remaining += 1;
 					}
 				}
 			}
@@ -168,7 +178,22 @@ function Game(options) {
 				lives.die();
 				game.isRunning = false;
 				status.innerHTML = "Press spacebar to continue.";
+
+				if (lives.count === 0) {
+					status.innerHTML = "Game over. Press spacebar to start new game.";
+				}
 			}
+		}
+
+		// brick colision
+		var row = Math.floor(ball.y / bricks.height());
+		var brick = Math.floor(ball.x / bricks.width());
+		if (ball.y < bricks.currentMap.length * bricks.height() && bricks.currentMap[row][brick] > 0) {
+			if (bricks.currentMap[row][brick] < 3)
+				bricks.currentMap[row][brick] = 0;
+			else
+				bricks.currentMap[row][brick] -= 1;
+			ball.dy = -ball.dy;
 		}
 		
 		ball.y += ball.dy * game.speed;
@@ -182,6 +207,14 @@ function Game(options) {
 		animate();
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
 		bricks.draw();
+		
+		if (bricks.remaining === 0) {
+			game.isRunning = false;
+			game.isWon = true;
+			status.innerHTML = "!! YOU WIN, now hire me. !!<br/>... or just press spacebar for another game.";
+		}
+
+
 		if (game.isRunning) {
 			bat.draw();
 			ball.draw();
@@ -212,11 +245,39 @@ function Game(options) {
 		// reset the game
 		document.onkeypress = function (event) {
 			var key = event.charCode ? event.charCode : event.keyCode;
-			if(key == 32 && !game.isRunning) {
-				game.reset();
+			if (key == 32 && !game.isRunning) {
+				if (lives.count === 0 || game.isWon)
+					game.init();
+				else
+					game.reset();
+
+				status.innerHTML = "";
+			}
+		};
+
+
+
+		document.onmousemove = function (event) {
+			if (event.pageX > canvas.offsetLeft && event.pageX < canvas.offsetLeft + canvas.width) {
+				bat.pos = event.pageX - (canvas.offsetLeft + bat.width / 2);
 			}
 		};
 	}
+
+	var images = {
+		add: function (id, src) {
+			var img = new Image();
+			img.src = src;
+			this[id] = img;
+		},
+		init: function () {
+			this.add('1', 'images/plank.png');
+			this.add('2', 'images/pig-damaged.png');
+			this.add('3', 'images/pig-happy.png');
+			this.add('bird', 'images/bird.png');
+			this.add('stone', 'images/stone.png');
+		}
+	};
 
 	/*
 	 *	Helper function that finds the right animation frame request
@@ -238,7 +299,7 @@ function Game(options) {
 
 var arkanoid = new Game({
 	canvas: document.querySelector('#game'),
-	lives: 4,
+	lives: 5,
 	speed: 5
 });
 

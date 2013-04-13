@@ -2,22 +2,28 @@ body {
 	font-family: arial;
 }
 
+.wrapper {
+	width: 830px;
+	margin: 0 auto;
+}
+
+h1 {
+	text-align: center;
+}
+
 #game {
 	margin: 0 auto;
 	display: block;
-	background-color: black;
-}
-
-.lives {
-	color: red;
-	margin: 0 auto;
-	width: 500px;
+	background-color: #181818;
 }
 
 .lives span {
 	float: right;
 	font-weight: bold;
-	padding: 0.5em;
+	margin: 0.5em;
+	width: 20px;
+	height: 20px;
+	background: url('bird.png') no-repeat;
 }
 
 .hide {
