@@ -1,11 +1,3 @@
-Array.prototype.clone = function() {
-    var arr = this.slice(0);
-    for( var i = 0; i < this.length; i++ )
-        if( this[i].clone )
-            arr[i] = this[i].clone();
-    return arr;
-};
-
 function Game(options) {
 	"use strict";
 	
@@ -211,7 +203,7 @@ function Game(options) {
 		if (bricks.remaining === 0) {
 			game.isRunning = false;
 			game.isWon = true;
-			status.innerHTML = "!! YOU WIN, now hire me. !!<br/>... or just press spacebar for another game.";
+			status.innerHTML = "You win. Press spacebar for new game.";
 		}
 
 
@@ -294,8 +286,16 @@ function Game(options) {
 
 		return false;
 	}
-
 }
+
+// Returns clone of provided array (to avoid pass by reference)
+Array.prototype.clone = function() {
+    var arr = this.slice(0);
+    for( var i = 0; i < this.length; i++ )
+        if( this[i].clone )
+            arr[i] = this[i].clone();
+    return arr;
+};
 
 var arkanoid = new Game({
 	canvas: document.querySelector('#game'),
