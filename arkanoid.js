@@ -15,30 +15,30 @@ function Game(options) {
 	 *	Public .init() initiates the game
 	 */
 	this.init = function () {
-		images.init();
+		var done = false;
+		var gamestate = null;
 
 		if (window.localStorage) {
-			var gs = JSON.parse(window.localStorage.getItem('gamestate'));
+			gamestate = JSON.parse(window.localStorage.getItem('gamestate'));
 			// if gamestate is present from previous session use stored values to initiate the game
-			if (gs !== null) {
-				bricks.init(gs.bricks.currentMap.clone(), gs.bricks.remaining);
-				ball.init(gs.ball.x, gs.ball.y, gs.ball.dx, gs.ball.dy);
-				bat.init(gs.bat.pos);
-				lives.init(gs.lives);
-			} 
-			// otherwise just start the game with default values
-			else {
-				lives.init();
-				ball.init();
-				bat.init();
-				bricks.init();
+			if (gamestate !== null && !gamestate.isWon && gamestate.lives > 0) {
+				bricks.init(gamestate.bricks.currentMap.clone(), gamestate.bricks.remaining);
+				ball.init(gamestate.ball.x, gamestate.ball.y, gamestate.ball.dx, gamestate.ball.dy);
+				bat.init(gamestate.bat.pos);
+				lives.init(gamestate.lives);
+				done = true;
 			}
-		} else {
+		}
+
+		// otherwise just start the game with default values
+		if (!done) {
 			ball.init();
 			bat.init();
 			bricks.init();
 			lives.init();
 		}
+
+		images.init();
 
 		addKeyHandlers();
 		game.isRunning = true;
@@ -169,7 +169,7 @@ function Game(options) {
 	};
 
 	/*
-	 *	animate() checks the position of the ball and recalculates its location according to its surroundings
+	 *	animate() checks the position of the ball and recalculates its location according to its surroundingamestate
 	 */
 	function animate() {
 		// bounce off left or right wall
@@ -229,14 +229,15 @@ function Game(options) {
 			reqAnimationFrame(tick);
 		}
 
+		// save current game state to local storage
 		if (window.localStorage) {
-			var gamestate = {
+			window.localStorage.setItem('gamestate', JSON.stringify({
 				lives: lives.count,
+				bricks: bricks,
 				ball: ball,
 				bat: bat,
-				bricks: bricks
-			};
-			window.localStorage.setItem('gamestate', JSON.stringify(gamestate));
+				isWon: game.isWon
+			}));
 		}
 	}
 
@@ -260,6 +261,12 @@ function Game(options) {
 			bat.isMovingRight = false;
 		};
 
+		// use mouse to control the bat if cursor is within canvas's x axis
+		document.onmousemove = function (event) {
+			if (event.pageX > canvas.offsetLeft && event.pageX < canvas.offsetLeft + canvas.width)
+				bat.pos = event.pageX - (canvas.offsetLeft + bat.width / 2);
+		};
+
 		// reset the game
 		document.onkeypress = function (event) {
 			var key = event.charCode ? event.charCode : event.keyCode;
@@ -270,14 +277,6 @@ function Game(options) {
 					game.reset();
 
 				status.innerHTML = "";
-			}
-		};
-
-
-
-		document.onmousemove = function (event) {
-			if (event.pageX > canvas.offsetLeft && event.pageX < canvas.offsetLeft + canvas.width) {
-				bat.pos = event.pageX - (canvas.offsetLeft + bat.width / 2);
 			}
 		};
 	}
@@ -322,6 +321,8 @@ Array.prototype.clone = function() {
             arr[i] = this[i].clone();
     return arr;
 };
+
+
 
 var arkanoid = new Game({
 	canvas: document.querySelector('#game'),
