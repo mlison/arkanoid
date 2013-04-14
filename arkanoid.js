@@ -281,9 +281,9 @@ function Game(options) {
 
 		// use mouse to control the bat if cursor is within canvas
 		document.onmousemove = function (event) {
-			if (event.pageX > canvas.offsetLeft && event.pageX < canvas.offsetLeft + canvas.width &&
+			if (event.pageX > canvas.offsetParent.offsetLeft && event.pageX < canvas.offsetParent.offsetLeft + canvas.width &&
 				event.pageY > canvas.offsetTop && event.pageY < canvas.offsetTop + canvas.height)
-				bat.pos = event.pageX - (canvas.offsetLeft + bat.width / 2);
+				bat.pos = event.pageX - canvas.offsetParent.offsetLeft - bat.width / 2;
 		};
 
 		// reset the game
