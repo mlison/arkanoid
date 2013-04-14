@@ -225,6 +225,12 @@ function Game(options) {
 		// finally change the ball coordinates based upon its direction and speed
 		ball.y += ball.dy * speed;
 		ball.x += ball.dx * speed;
+
+		// reset values to max/min if the ball happens to stumble outside of canvas area
+		ball.x = (ball.x > canvas.width) ? canvas.width : ball.x;
+		ball.x = (ball.x < 0) ? 0 : ball.x;
+		ball.y = (ball.y > canvas.height) ? canvas.height : ball.y;
+		ball.y = (ball.y < 0) ? 0 : ball.y;
     }
 
     /*
