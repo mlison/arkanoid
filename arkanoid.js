@@ -50,6 +50,7 @@ function Game(options) {
 
 		addKeyHandlers();
 		game.isRunning = true;
+		game.isWon = false;
 
 		tick();
 	};
