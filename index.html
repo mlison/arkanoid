@@ -2,17 +2,19 @@
 <html>
     <head>
         <meta charset="utf-8">
-        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
         <title>Arkanoid</title>
-        <meta name="description" content="">
+        <meta name="description" content="JavaScript implementation of popular Arkanoid game... with a little bit of Rovio branding.">
         <link rel="stylesheet" href="styles.css">
     </head>
     <body>
         <div class="wrapper">
             <h1>Angrynoid aka arkabirds</h1>
             <canvas id="game" width="830" height="500"></canvas>
+            <div class="actions">
+                <button id="new">New game</button>
+            </div>
             <div class="lives"></div>
-            <p class="status">Ohai!</p>
+            <p class="status">Ohai!<br />Use arrows to control the paddle.</p>
         </div>
         <script src="arkanoid.js"></script>
     </body>
