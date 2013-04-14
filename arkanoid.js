@@ -10,6 +10,8 @@ function Game(options) {
 	game.isRunning = false;
 	game.isWon = false;
 
+
+
 	/*
 	 *	Public .init() initiates the game with 'saved' game data if available, or start a new game
 	 */
@@ -23,9 +25,16 @@ function Game(options) {
 			gamestate = JSON.parse(window.localStorage.getItem('gamestate'));
 			// if gamestate is present from previous session use stored values to initiate the game
 			if (gamestate !== null && !gamestate.isWon && gamestate.lives > 0) {
+				if (gamestate.isRunning) {
+					// if the game was running use stored values
+					ball.init(gamestate.ball.x, gamestate.ball.y, gamestate.ball.dx, gamestate.ball.dy);
+					bat.init(gamestate.bat.pos);
+				} else {
+					// otherwise reset ball and bat
+					ball.init();
+					bat.init();		
+				}
 				bricks.init(gamestate.bricks.currentMap.clone(), gamestate.bricks.remaining);
-				ball.init(gamestate.ball.x, gamestate.ball.y, gamestate.ball.dx, gamestate.ball.dy);
-				bat.init(gamestate.bat.pos);
 				lives.init(gamestate.lives);
 				done = true;
 			}
@@ -97,7 +106,7 @@ function Game(options) {
 		init: function (x, y, dx, dy) {
 			this.x = (x) ? x : canvas.width / 2,
 			this.y = (y) ? y : canvas.height / 2,
-			this.dx = (dx) ? dx : 0.05,
+			this.dx = (dx) ? dx : 0.025,
 			this.dy = (dy) ? dy : 1,
 			this.size = 10;
 		},
@@ -244,7 +253,8 @@ function Game(options) {
 				bricks: bricks,
 				ball: ball,
 				bat: bat,
-				isWon: game.isWon
+				isWon: game.isWon,
+				isRunning: game.isRunning
 			}));
 		}
 	}
@@ -280,10 +290,12 @@ function Game(options) {
 		document.onkeypress = function (event) {
 			var key = event.charCode ? event.charCode : event.keyCode;
 			if (key == 32 && !game.isRunning) {
-				if (lives.count === 0 || game.isWon)
+				if (lives.count === 0 || game.isWon) {
 					game.init();
-				else
+				}
+				else {
 					game.reset();
+				}
 
 				status.innerHTML = "";
 			}
