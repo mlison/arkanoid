@@ -1,22 +1,23 @@
 function Game(options) {
 	"use strict";
 	
-	var game = this;
-
-	var canvas = (options.canvas) ? options.canvas : document.querySelector('#game');
-	var ctx = canvas.getContext("2d");
-	var status = (options.status) ? options.status : document.querySelectorAll(".status")[0];
-	var speed = (options.speed) ? options.speed : 5;
+	var game = this,
+		canvas = (options.canvas) ? options.canvas : document.querySelector('#game'),
+		status = (options.status) ? options.status : document.querySelectorAll(".status")[0],
+		ctx = canvas.getContext("2d"),
+		speed = (options.speed) ? options.speed : 5;
 
 	game.isRunning = false;
 	game.isWon = false;
 
 	/*
-	 *	Public .init() initiates the game
+	 *	Public .init() initiates the game with 'saved' game data if available, or start a new game
 	 */
 	this.init = function () {
-		var done = false;
-		var gamestate = null;
+		var done = false,
+			gamestate = null;
+
+		images.init();
 
 		if (window.localStorage) {
 			gamestate = JSON.parse(window.localStorage.getItem('gamestate'));
@@ -38,8 +39,6 @@ function Game(options) {
 			lives.init();
 		}
 
-		images.init();
-
 		addKeyHandlers();
 		game.isRunning = true;
 
@@ -57,16 +56,20 @@ function Game(options) {
 		reqAnimationFrame(tick);
 	};
 
+
+
 	/*
-	 *	Private lives object
+	 *	Private lives object, implements life tracking from init() till die()
+	 *	.init			initializes lives object
 	 *	.container		element where lives live
 	 *	.count			keeps track of how many lives are left
-	 *	.draw()			draws available lives to container
+	 *	.draw()			draws available lives to .container
 	 *	.die()			removes a life
 	 */
 	var lives = {
 		init: function (count) {
 			this.count = (count) ? count : options.lives;
+			this.container.innerHTML = "";
 			this.draw();
 		},
 		container: document.querySelectorAll(".lives")[0],
@@ -83,12 +86,11 @@ function Game(options) {
 	};
 
 	/*
-	 *	Private ball object
+	 *	Private ball object, implements ball and keeps track of where it is and where its going
 	 *	.init()		initializes basic properties of the ball (position, direction and size)
 	 *	.draw()		draws ball on canvas at its current x:y position
 	 *	.size		radius of "ball" icon, although its technically a square
-	 *	.icon		reference to the bird image
-	 *  .left(), .right(), .top(), .bottom() are ball boundries	
+	 *  .left(), .right(), .top(), .bottom() are ball boundries
 	 *  .padding	offset from the edge used to soften edges of the playground
 	 */
 	var ball = {
@@ -103,16 +105,18 @@ function Game(options) {
 			ctx.drawImage(images.bird, this.x-this.size, this.y-this.size);
 		},
 		padding: 5,
-		left: function () { return this.x - this.size / 2 - this.padding; },
-		right: function () { return this.x + this.size / 2 + this.padding; },
-		bottom: function () { return this.y + this.size + 12 / 2 + this.padding; },
-		top: function () { return this.y - this.size / 2 - this.padding; }
+		left:	function () { return this.x - this.size / 2 - this.padding; },
+		right:	function () { return this.x + this.size / 2 + this.padding; },
+		bottom:	function () { return this.y + this.size + 12 / 2 + this.padding; },
+		top:	function () { return this.y - this.size / 2 - this.padding; }
 	};
 
 	/*
-	 *	Private bat object
+	 *	Private bat object, implements the bat and keeps track of where it is and whether it is moving
 	 *	.init()		initializes basic properties of the bat
 	 *	.draw()		draws a bat on canvas at its current position
+	 *	.pos		current bat position
+	 *	.isMovingLeft, .isMovingRight	is updated by keydown/keyup to make the movement smooth
 	 */
 	var bat = {
 		init: function (pos) {
@@ -133,22 +137,20 @@ function Game(options) {
 	};
 
 	/*
-	 *	Private brick object
-	 *	.height		
-	 *  .width
-	 *	.perRow		how many bricks in one row
-	 *	.levelMap	map of how bricks are distributed
-	 *	.draw()		loops through all the bricks and draws them on canvas
+	 *	Private brick object, implements and paints the bricks
+	 *	.levelMap		map of how bricks are distributed initially
+	 *	.currentMap		map of how bricks are distributed in current game
+	 *	.draw()			loops through all the bricks and draws them on canvas
+	 *	.remaining		how many bricks are left, updated on every redraw
 	 */
 	var bricks = {
 		init: function (map, remaining) {
 			this.currentMap = (map) ? map : this.levelMap.clone(),
 			this.remaining = (remaining) ? remaining : 0;
+			this.height = 20;
+			this.width = 83;
 			this.draw();
 		},
-		height: function () { return 20; },
-		width: function () { return canvas.width / this.currentMap[0].length; },
-		remaining: 0,
 		levelMap: [
 			[1,1,1,1,1,1,1,1,1,1],
 			[1,1,1,1,1,1,1,1,1,1],
@@ -160,7 +162,8 @@ function Game(options) {
 			for (var row in this.currentMap) {
 				for (var brick in this.currentMap[row]) {
 					if (this.currentMap[row][brick] > 0) {
-						ctx.drawImage(images[this.currentMap[row][brick]], this.width() * brick, row * bricks.height());
+						// brick textures are picked up from image object by their ID (which happens to be numeric for easier handling)
+						ctx.drawImage(images[this.currentMap[row][brick]], this.width * brick, row * bricks.height);
 						this.remaining += 1;
 					}
 				}
@@ -169,7 +172,8 @@ function Game(options) {
 	};
 
 	/*
-	 *	animate() checks the position of the ball and recalculates its location according to its surroundingamestate
+	 *	animate() checks the position of the ball and recalculates its location according to its surroundings,
+	 *	the function also implements colision checks with bricks and bat miss
 	 */
 	function animate() {
 		// bounce off left or right wall
@@ -184,27 +188,31 @@ function Game(options) {
 				ball.dx = 5 * ( (ball.x - (bat.pos+bat.width/2) ) / bat.width);
 				ball.dy = -ball.dy;
 			} else {
+				// remove a life and stop the game
 				lives.die();
 				game.isRunning = false;
 				status.innerHTML = "Press spacebar to continue.";
 
-				if (lives.count === 0) {
+				if (lives.count === 0)
 					status.innerHTML = "Game over. Press spacebar to start new game.";
-				}
 			}
 		}
 
 		// brick colision
-		var row = Math.floor(ball.y / bricks.height());
-		var brick = Math.floor(ball.x / bricks.width());
-		if (ball.y < bricks.currentMap.length * bricks.height() && bricks.currentMap[row][brick] > 0) {
-			if (bricks.currentMap[row][brick] < 3)
+		var row = Math.floor(ball.y / bricks.height);
+		var brick = Math.floor(ball.x / bricks.width);
+		if (ball.y < bricks.currentMap.length * bricks.height && bricks.currentMap[row][brick] > 0) {
+			// kill the brick
+			if (bricks.currentMap[row][brick] < 3){
 				bricks.currentMap[row][brick] = 0;
-			else
+			} else {
 				bricks.currentMap[row][brick] -= 1;
+			}
+			// and bounce off it
 			ball.dy = -ball.dy;
 		}
 		
+		// finally change the ball coordinates based upon its direction and speed
 		ball.y += ball.dy * speed;
 		ball.x += ball.dx * speed;
     }
@@ -243,7 +251,7 @@ function Game(options) {
 
 
 	/*
-	 *	Key handlers that control the game
+	 *	Key handlers, implement game controls
 	 */
 	function addKeyHandlers() {
 		// start bat movement
@@ -261,9 +269,10 @@ function Game(options) {
 			bat.isMovingRight = false;
 		};
 
-		// use mouse to control the bat if cursor is within canvas's x axis
+		// use mouse to control the bat if cursor is within canvas
 		document.onmousemove = function (event) {
-			if (event.pageX > canvas.offsetLeft && event.pageX < canvas.offsetLeft + canvas.width)
+			if (event.pageX > canvas.offsetLeft && event.pageX < canvas.offsetLeft + canvas.width &&
+				event.pageY > canvas.offsetTop && event.pageY < canvas.offsetTop + canvas.height)
 				bat.pos = event.pageX - (canvas.offsetLeft + bat.width / 2);
 		};
 
@@ -279,8 +288,19 @@ function Game(options) {
 				status.innerHTML = "";
 			}
 		};
+
+		// start a new game
+		document.querySelector("#new").onclick = function () {
+			if (window.localStorage)
+				window.localStorage.clear();
+			game.init();
+		};
 	}
 
+	/*
+	 *	Private image object that holds game textures
+	 *	TODO: implement image.onload
+	 */
 	var images = {
 		add: function (id, src) {
 			var img = new Image();
@@ -297,7 +317,7 @@ function Game(options) {
 	};
 
 	/*
-	 *	Helper function that finds the right animation frame request
+	 *	Helper function, finds the right animation frame request
 	 */
 	function reqAnimationFrame(func) {
 		if (typeof window.msRequestAnimationFrame === 'function') 
